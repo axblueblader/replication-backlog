@@ -9,7 +9,7 @@ import java.util.Iterator;
  */
 public class ReplicationBacklog {
 
-    private final int minBufferSize;
+    private final int blockSize;
     private final int capacity;
     private final Deque<BlockNode> blockList;
     private int currentOffset = 0; // increase every write equal to the length of command written
@@ -21,11 +21,11 @@ public class ReplicationBacklog {
      *
      * @param capacity the capacity
      */
-    public ReplicationBacklog(int capacity, int minBufferSize) {
+    public ReplicationBacklog(int capacity, int blockSize) {
         this.capacity = capacity;
         this.blockList = new ArrayDeque<>();
-        blockList.addLast(new BlockNode(minBufferSize));
-        this.minBufferSize = minBufferSize;
+        blockList.addLast(new BlockNode(blockSize));
+        this.blockSize = blockSize;
     }
 
     /**
@@ -41,7 +41,7 @@ public class ReplicationBacklog {
             lastNode.put(command, 0, command.length);
         } else {
             lastNode.put(command, 0, available);
-            BlockNode newNode = new BlockNode(Math.max(command.length, minBufferSize));
+            BlockNode newNode = new BlockNode(Math.max(command.length, blockSize));
             newNode.put(command, available, command.length - available);
             blockList.addLast(newNode);
         }
