@@ -35,18 +35,18 @@ public class ReplicationBacklog {
      */
     public void put(byte[] command) {
         endingOffset += command.length;
+        spaceUsed += command.length;
         BlockNode lastNode = blockList.getLast();
         int available = lastNode.getCapacity() - lastNode.getUsed();
         if (available >= command.length) {
             lastNode.put(command, 0, command.length);
         } else {
+            trimFront();
             lastNode.put(command, 0, available);
             BlockNode newNode = new BlockNode(Math.max(command.length, blockSize));
             newNode.put(command, available, command.length - available);
             blockList.addLast(newNode);
         }
-        spaceUsed += command.length;
-        trimFront();
     }
 
     /**
@@ -79,34 +79,34 @@ public class ReplicationBacklog {
     }
 
     /**
-     * Copy data from provided offset to current offset.
+     * Copy data from provided offset to the ending offset.
      *
-     * @param offset the offset
-     * @return the array
+     * @param startReadOffset the offset to start reading from provided by caller
+     * @return byte array of containing commands
      * @throws IllegalArgumentException if offset is larger than current available or smaller than minimum available
      */
-    public byte[] copyFromOffset(int offset) {
-        if (offset < startingOffset || offset > endingOffset) {
+    public byte[] copyFromOffset(int startReadOffset) {
+        if (startReadOffset < startingOffset || startReadOffset > endingOffset) {
             throw new IllegalArgumentException("Offset not available");
         }
-        int iterOffset = startingOffset;
+        int readingOffset = startingOffset;
         Iterator<BlockNode> iter = blockList.iterator();
-        int copied = 0;
-        byte[] result = new byte[endingOffset - offset];
+        int nextWriteOffset = 0;
+        byte[] result = new byte[endingOffset - startReadOffset];
         while (iter.hasNext()) {
             BlockNode node = iter.next();
-            iterOffset += node.getUsed();
-            if (iterOffset > offset) {
-                int startPos = node.getUsed() - (iterOffset - offset);
-                System.arraycopy(node.getArray(), startPos, result, 0, iterOffset - offset);
-                copied += iterOffset - offset;
+            readingOffset += node.getUsed();
+            if (readingOffset >= startReadOffset) {
+                int startPos = node.getUsed() - (readingOffset - startReadOffset);
+                System.arraycopy(node.getArray(), startPos, result, nextWriteOffset, readingOffset - startReadOffset);
+                nextWriteOffset +=  readingOffset - startReadOffset;
                 break;
             }
         }
         while (iter.hasNext()) {
             BlockNode node = iter.next();
-            System.arraycopy(node.getArray(), 0, result, copied, node.getUsed());
-            copied += node.getUsed();
+            System.arraycopy(node.getArray(), 0, result, nextWriteOffset, node.getUsed());
+            nextWriteOffset += node.getUsed();
         }
         return result;
     }
