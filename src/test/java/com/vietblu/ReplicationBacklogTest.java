@@ -14,10 +14,10 @@ class ReplicationBacklogTest {
     void whenCopyOffset_withValidDataAndOffset_returnCorrectData() {
         ReplicationBacklog backlog = new ReplicationBacklog(6, 1);
         backlog.put(new byte[]{1,});
-        assertEquals(1,backlog.getCurrentOffset());
+        assertEquals(1,backlog.getEndingOffset());
         backlog.put(new byte[]{2, 2});
         backlog.put(new byte[]{3, 3, 3});
-        assertEquals(6,backlog.getCurrentOffset());
+        assertEquals(6,backlog.getEndingOffset());
         byte[] bytes;
         bytes = backlog.copyFromOffset(0);
         assertArrayEquals(new byte[]{1, 2, 2, 3, 3, 3}, bytes);

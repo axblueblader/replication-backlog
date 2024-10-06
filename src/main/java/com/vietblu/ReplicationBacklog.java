@@ -12,7 +12,7 @@ public class ReplicationBacklog {
     private final int blockSize;
     private final int capacity;
     private final Deque<BlockNode> blockList;
-    private int currentOffset = 0; // increase every write equal to the length of command written
+    private int endingOffset = 0; // increase every write equal to the length of command written
     private int startingOffset = 0;
     private int spaceUsed = 0;
 
@@ -34,7 +34,7 @@ public class ReplicationBacklog {
      * @param command the command
      */
     public void put(byte[] command) {
-        currentOffset += command.length;
+        endingOffset += command.length;
         BlockNode lastNode = blockList.getLast();
         int available = lastNode.getCapacity() - lastNode.getUsed();
         if (available >= command.length) {
@@ -65,8 +65,8 @@ public class ReplicationBacklog {
      *
      * @return the current offset
      */
-    public int getCurrentOffset() {
-        return currentOffset;
+    public int getEndingOffset() {
+        return endingOffset;
     }
 
     /**
@@ -86,13 +86,13 @@ public class ReplicationBacklog {
      * @throws IllegalArgumentException if offset is larger than current available or smaller than minimum available
      */
     public byte[] copyFromOffset(int offset) {
-        if (offset < startingOffset || offset > currentOffset) {
+        if (offset < startingOffset || offset > endingOffset) {
             throw new IllegalArgumentException("Offset not available");
         }
         int iterOffset = startingOffset;
         Iterator<BlockNode> iter = blockList.iterator();
         int copied = 0;
-        byte[] result = new byte[currentOffset - offset];
+        byte[] result = new byte[endingOffset - offset];
         while (iter.hasNext()) {
             BlockNode node = iter.next();
             iterOffset += node.getUsed();
